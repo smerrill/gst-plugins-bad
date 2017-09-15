@@ -247,23 +247,26 @@ gst_curl_tls_sink_set_options_unlocked (GstCurlBaseSink * bcsink)
     }
   }
 
-  /* crypto engine */
-  if ((sink->crypto_engine == NULL) ||
-      (strcmp (sink->crypto_engine, "auto") == 0)) {
-    res = curl_easy_setopt (bcsink->curl, CURLOPT_SSLENGINE_DEFAULT, 1L);
-    if (res != CURLE_OK) {
-      bcsink->error =
-          g_strdup_printf ("failed to set default crypto engine: %s",
-          curl_easy_strerror (res));
-      return FALSE;
-    }
-  } else {
-    res = curl_easy_setopt (bcsink->curl, CURLOPT_SSLENGINE,
-        sink->crypto_engine);
-    if (res != CURLE_OK) {
-      bcsink->error = g_strdup_printf ("failed to set crypto engine: %s",
-          curl_easy_strerror (res));
-      return FALSE;
+  /* If the crypto-engine parameter is absent, do not set it. This will allow
+   * the curl sink to stream to HTTPS endpoints on systems where OpenSSL is
+   * built without dynamic engine support. */
+  if (sink->crypto_engine != NULL) {
+    if (strcmp (sink->crypto_engine, "auto") == 0) {
+      res = curl_easy_setopt (bcsink->curl, CURLOPT_SSLENGINE_DEFAULT, 1L);
+      if (res != CURLE_OK) {
+        bcsink->error =
+            g_strdup_printf ("failed to set default crypto engine: %s",
+            curl_easy_strerror (res));
+        return FALSE;
+      }
+    } else {
+      res = curl_easy_setopt (bcsink->curl, CURLOPT_SSLENGINE,
+          sink->crypto_engine);
+      if (res != CURLE_OK) {
+        bcsink->error = g_strdup_printf ("failed to set crypto engine: %s",
+            curl_easy_strerror (res));
+        return FALSE;
+      }
     }
   }
 
